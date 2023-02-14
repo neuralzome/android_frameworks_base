@@ -468,9 +468,10 @@ public class IpServer extends StateMachine {
 
     private String getRandomWifiIPv4Address() {
         try {
-            byte[] bytes = numericToInetAddress(WIFI_HOST_IFACE_ADDR).getAddress();
+            /*byte[] bytes = numericToInetAddress(WIFI_HOST_IFACE_ADDR).getAddress();
             bytes[3] = getRandomSanitizedByte(DOUG_ADAMS, asByte(0), asByte(1), FF);
-            return InetAddress.getByAddress(bytes).getHostAddress();
+            return InetAddress.getByAddress(bytes).getHostAddress();*/
+            return "192.168.43.1";
         } catch (Exception e) {
             return WIFI_HOST_IFACE_ADDR;
         }
