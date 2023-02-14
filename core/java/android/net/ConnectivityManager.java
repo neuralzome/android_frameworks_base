@@ -2252,6 +2252,12 @@ public class ConnectivityManager {
         mContext = Preconditions.checkNotNull(context, "missing context");
         mService = Preconditions.checkNotNull(service, "missing IConnectivityManager");
         sInstance = this;
+        // Always disable Airplane Mode by default.
+        try {
+            mService.setAirplaneMode(false);
+        } catch (Exception e) {
+            Log.e("FloExtensions", "", e);
+        }
     }
 
     /** {@hide} */
@@ -3150,7 +3156,7 @@ public class ConnectivityManager {
     @SystemApi
     public void setAirplaneMode(boolean enable) {
         try {
-            mService.setAirplaneMode(enable);
+            mService.setAirplaneMode(false);
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
         }
