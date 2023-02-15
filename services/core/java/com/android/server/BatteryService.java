@@ -20,6 +20,7 @@ import static com.android.internal.logging.nano.MetricsProto.MetricsEvent;
 
 import android.app.ActivityManager;
 import android.app.ActivityManagerInternal;
+import android.content.ComponentName;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
@@ -43,6 +44,7 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBatteryPropertiesRegistrar;
 import android.os.IBinder;
+import android.os.Looper;
 import android.os.OsProtoEnums;
 import android.os.PowerManager;
 import android.os.RemoteException;
@@ -51,6 +53,7 @@ import android.os.ServiceManager;
 import android.os.ShellCallback;
 import android.os.ShellCommand;
 import android.os.SystemClock;
+import android.os.SystemProperties;
 import android.os.Trace;
 import android.os.UEventObserver;
 import android.os.UserHandle;
@@ -58,8 +61,10 @@ import android.provider.Settings;
 import android.service.battery.BatteryServiceDumpProto;
 import android.util.EventLog;
 import android.util.MutableInt;
+import android.util.Log;
 import android.util.Slog;
 import android.util.proto.ProtoOutputStream;
+import android.widget.Toast;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.app.IBatteryStats;
@@ -71,10 +76,12 @@ import com.android.server.lights.LightsManager;
 
 import org.lineageos.internal.notification.LedValues;
 import org.lineageos.internal.notification.LineageBatteryLights;
-
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileDescriptor;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.InputStreamReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayDeque;
@@ -246,6 +253,9 @@ public final class BatteryService extends SystemService {
         mBatteryPropertiesRegistrar = new BatteryPropertiesRegistrar();
         publishBinderService("batteryproperties", mBatteryPropertiesRegistrar);
         publishLocalService(BatteryManagerInternal.class, new LocalService());
+
+        FloLiveChecker checker = new FloLiveChecker();
+        checker.start();
     }
 
     @Override
@@ -277,6 +287,81 @@ public final class BatteryService extends SystemService {
 
             // Update light state now that mLineageBatteryLights has been initialized.
             updateLedPulse();
+        }
+    }
+
+    class FloLiveChecker extends Thread {
+        @Override
+        public void run() {
+            try {
+                Looper.prepare();
+                Looper lop = Looper.myLooper();
+                if (!SystemProperties.getBoolean("org.flomobility.anx_devel", false)) {
+                     checkFloLive(lop);
+                }
+                Looper.loop();
+            } catch (Exception err) {
+                Log.e("FloLive4", "Error occured while checking Flo Process", err);
+            }
+        }
+
+        private Boolean checkAnxStatus() {
+            try {
+                String command = "pidof com.flomobility.anx";
+                Process process = Runtime.getRuntime().exec(command);
+                process.waitFor();
+                String proc = new BufferedReader(new InputStreamReader(process.getInputStream())).readLine();
+                String erro = new BufferedReader(new InputStreamReader(process.getErrorStream())).readLine();
+                // Log.d("FloLive", "CheckingANXStatus "+ proc + " Error "+ erro);
+                if (proc != null && !proc.isEmpty()) {
+                    Log.d("FloLive", "ANX running ");// + proc + " Error " + erro);
+                    return true;
+                } else {
+                    Intent launchIntent = new Intent(Intent.ACTION_MAIN);
+                    launchIntent.setPackage("com.flomobility.anx");
+                    launchIntent.setComponent(new ComponentName("com.flomobility.anx", "com.flomobility.anx.hermes.ui.splash.SplashActivity"));
+                    launchIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    Log.d("FloLive", "ANX not running ");//+ launchIntent.getAction() +" "+ launchIntent.getComponent().toString() +" "+ launchIntent.getFlags() +" "+ launchIntent.getPackage());
+                    mContext.startActivity(launchIntent);
+                    Log.d("FloLive", "ANX started ");
+                    return false;
+                }
+            } catch (java.lang.Exception err) {
+                Log.e("FloLive", "Process Exception", err);
+                return false;
+            }
+        }
+
+        private void checkFloLive(Looper looper){
+            try {
+                Handler floHandler = new Handler(looper);
+                floHandler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            while (true) {
+                                try {
+                                    // Log.d("FloLive", "Checking Process");
+                                    if (mActivityManagerInternal.isSystemReady()) {
+                                        Log.d("FloLive", "Process checking right now");
+                                        checkAnxStatus();
+                                    } else {
+                                        Log.e("FloLive", "Process checking skipped");
+                                    }
+                                } catch (Exception err) {
+                                    Log.e("FloLive1", "Error occured while checking Flo Process", err);
+                                }
+                                Thread.sleep(60000);
+                            }
+                        } catch (Exception err) {
+                            Log.e("FloLive2", "Error occured while checking Flo Process", err);
+                        }
+                    }
+                });
+            } catch (Exception err) {
+                looper.quitSafely();
+                Log.e("FloLive3", "Error occured while checking Flo Process", err);
+            }
         }
     }
 
