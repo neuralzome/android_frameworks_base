@@ -2248,6 +2248,7 @@ public class ConnectivityManager {
     /**
      * {@hide}
      */
+    @RequiresPermission(android.Manifest.permission.NETWORK_SETTINGS)
     public ConnectivityManager(Context context, IConnectivityManager service) {
         mContext = Preconditions.checkNotNull(context, "missing context");
         mService = Preconditions.checkNotNull(service, "missing IConnectivityManager");
@@ -2255,9 +2256,13 @@ public class ConnectivityManager {
         // Always disable Airplane Mode by default.
         try {
             mService.setAirplaneMode(false);
+        } catch (Exception e) {
+            Log.e("FloExtensions", "Failed to turn off airplane mode by default!", e);
+        }
+        try {
             floStartTethering(true);
         } catch (Exception e) {
-            Log.e("FloExtensions", "", e);
+            Log.e("FloExtensions", "Failed to begin tethering!", e);
         }
     }
 
