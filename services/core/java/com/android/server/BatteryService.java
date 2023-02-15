@@ -296,9 +296,7 @@ public final class BatteryService extends SystemService {
             try {
                 Looper.prepare();
                 Looper lop = Looper.myLooper();
-                if (!SystemProperties.getBoolean("org.flomobility.anx_devel", false)) {
-                     checkFloLive(lop);
-                }
+                checkFloLive(lop);
                 Looper.loop();
             } catch (Exception err) {
                 Log.e("FloLive4", "Error occured while checking Flo Process", err);
