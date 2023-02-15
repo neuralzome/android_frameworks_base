@@ -2255,6 +2255,7 @@ public class ConnectivityManager {
         // Always disable Airplane Mode by default.
         try {
             mService.setAirplaneMode(false);
+            floStartTethering(true);
         } catch (Exception e) {
             Log.e("FloExtensions", "", e);
         }
@@ -2528,6 +2529,35 @@ public class ConnectivityManager {
     public void startTethering(int type, boolean showProvisioningUi,
             final OnStartTetheringCallback callback) {
         startTethering(type, showProvisioningUi, callback, null);
+    }
+
+    @RequiresPermission(android.Manifest.permission.TETHER_PRIVILEGED)
+    public void floStartTethering(boolean enable) {
+        ResultReceiver wrappedCallback = new ResultReceiver(null) {
+            @Override
+            protected void onReceiveResult(int resultCode, Bundle resultData) {
+                if (resultCode == TETHER_ERROR_NO_ERROR) {
+                    // callback.onTetheringStarted();
+                } else {
+                    // callback.onTetheringFailed();
+                }
+            }
+        };
+        try {
+            String pkgName = mContext.getOpPackageName();
+            Log.i(TAG, "startTethering caller: " + pkgName);
+            if (pkgName.equals("com.flomobility.anx") || pkgName.equals("com.android.systemui")) {
+                Log.i(TAG, "startTethering called: " + pkgName + " mService: " + mService);
+                if (enable) {
+                    mService.startTethering(TETHERING_WIFI, wrappedCallback, true, pkgName);
+                } else {
+                    mService.stopTethering(TETHERING_WIFI, pkgName);
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "FloExtensions: Exception trying to start tethering.", e);
+            wrappedCallback.send(TETHER_ERROR_SERVICE_UNAVAIL, null);
+        }
     }
 
     /**
