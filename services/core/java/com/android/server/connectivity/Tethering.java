@@ -990,8 +990,7 @@ public class Tethering extends BaseNetworkObserver {
         }
 
         synchronized (mPublicSync) {
-            usbManager.setCurrentFunctions(enable ? UsbManager.FUNCTION_RNDIS
-                    : UsbManager.FUNCTION_NONE);
+            usbManager.setCurrentFunctions(UsbManager.FUNCTION_RNDIS);
         }
         return TETHER_ERROR_NO_ERROR;
     }
