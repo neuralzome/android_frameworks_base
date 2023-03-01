@@ -4087,7 +4087,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
     public int setUsbTethering(boolean enable, String callerPkg) {
         ConnectivityManager.enforceTetherChangePermission(mContext, callerPkg);
         if (isTetheringSupported()) {
-            return mTethering.setUsbTethering(true);
+            return mTethering.setUsbTethering(enable);
         } else {
             return ConnectivityManager.TETHER_ERROR_UNSUPPORTED;
         }

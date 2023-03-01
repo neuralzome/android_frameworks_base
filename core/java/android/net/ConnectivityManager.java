@@ -2555,10 +2555,8 @@ public class ConnectivityManager {
                 Log.i(TAG, "startTethering called: " + pkgName + " mService: " + mService);
                 if (enable) {
                     mService.startTethering(TETHERING_WIFI, wrappedCallback, true, pkgName);
-                    mService.startTethering(TETHERING_USB, wrappedCallback, true, pkgName);
                 } else {
                     mService.stopTethering(TETHERING_WIFI, pkgName);
-                    mService.stopTethering(TETHERING_USB, pkgName);
                 }
             }
         } catch (Exception e) {
@@ -2805,7 +2803,7 @@ public class ConnectivityManager {
         try {
             String pkgName = mContext.getOpPackageName();
             Log.i(TAG, "setUsbTethering caller:" + pkgName);
-            return mService.setUsbTethering(true, pkgName);
+            return mService.setUsbTethering(enable, pkgName);
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
         }
