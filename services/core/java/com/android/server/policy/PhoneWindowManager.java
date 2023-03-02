@@ -169,6 +169,7 @@ import android.os.UEventObserver;
 import android.os.UserHandle;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
+import android.os.SystemVibrator;
 import android.provider.MediaStore;
 import android.provider.Settings;
 import android.service.dreams.DreamManagerInternal;
@@ -1445,8 +1446,12 @@ public class PhoneWindowManager implements WindowManagerPolicy {
             case LONG_PRESS_POWER_SHUT_OFF:
             case LONG_PRESS_POWER_SHUT_OFF_NO_CONFIRM:
                 mPowerKeyHandled = true;
-                performHapticFeedback(HapticFeedbackConstants.LONG_PRESS, false,
-                        "Power - Long Press - Shut Off");
+                Vibrator vibrator = new SystemVibrator(mContext);
+                try {
+                    vibrator.vibrate(2000, VIBRATION_ATTRIBUTES);
+                } catch (Exception e) {
+                    Log.w("FloVib", "Failed to vibrate for 2 seconds", e);
+                }
                 sendCloseSystemWindows(SYSTEM_DIALOG_REASON_GLOBAL_ACTIONS);
                 mWindowManagerFuncs.shutdown(behavior == LONG_PRESS_POWER_SHUT_OFF);
                 break;
