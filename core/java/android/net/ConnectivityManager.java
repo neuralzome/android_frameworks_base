@@ -2565,8 +2565,6 @@ public class ConnectivityManager {
                     } catch (Exception e) {
                         Log.e(TAG, "FloExtensions: Exception trying to start USB tethering.", e);
                     }
-                } else {
-                    Log.i(TAG, "FloExtensions: Tethering already enabled.");
                 }
             }
         };
