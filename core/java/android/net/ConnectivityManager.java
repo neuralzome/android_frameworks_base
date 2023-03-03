@@ -2542,7 +2542,7 @@ public class ConnectivityManager {
     @RequiresPermission(android.Manifest.permission.TETHER_PRIVILEGED)
     public void floStartTethering(boolean enable) {
         String pkgName = mContext.getOpPackageName();
-        boolean isOurPkg = (pkgName.equals("com.flomobility.anx") || pkgName.equals("com.android.systemui"));
+        boolean isOurPkg = pkgName.equals("com.android.systemui");
         ResultReceiver wrappedCallback = new ResultReceiver(null) {
             @Override
             protected void onReceiveResult(int resultCode, Bundle resultData) {
