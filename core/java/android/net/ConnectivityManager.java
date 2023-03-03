@@ -2541,6 +2541,8 @@ public class ConnectivityManager {
 
     @RequiresPermission(android.Manifest.permission.TETHER_PRIVILEGED)
     public void floStartTethering(boolean enable) {
+        String pkgName = mContext.getOpPackageName();
+        boolean isOurPkg = (pkgName.equals("com.flomobility.anx") || pkgName.equals("com.android.systemui"));
         ResultReceiver wrappedCallback = new ResultReceiver(null) {
             @Override
             protected void onReceiveResult(int resultCode, Bundle resultData) {
@@ -2555,29 +2557,27 @@ public class ConnectivityManager {
             @Override
             public void onReceive(Context context, Intent intent) {
                 boolean mUsbConnected = intent.getBooleanExtra(UsbManager.USB_CONNECTED, false);
-                if (mUsbConnected) {
+                boolean mUsbTetherEnabled = intent.getBooleanExtra(UsbManager.USB_FUNCTION_RNDIS, false);
+                if (mUsbConnected && !mUsbTetherEnabled && isOurPkg) {
                     try {
-                        mService.setUsbTethering(true, context.getOpPackageName());
+                        Log.i(TAG, "FloExtensions: Turning on tethering");
+                        mService.setUsbTethering(true, pkgName);
                     } catch (Exception e) {
                         Log.e(TAG, "FloExtensions: Exception trying to start USB tethering.", e);
                     }
+                } else {
+                    Log.i(TAG, "FloExtensions: Tethering already enabled.");
                 }
             }
         };
         try {
-            String pkgName = mContext.getOpPackageName();
             Log.i(TAG, "startTethering caller: " + pkgName);
-            if (pkgName.equals("com.flomobility.anx") || pkgName.equals("com.android.systemui")) {
+            if (isOurPkg) {
                 Log.i(TAG, "startTethering called: " + pkgName + " mService: " + mService);
-                if (enable) {
-                    mService.startTethering(TETHERING_WIFI, wrappedCallback, true, pkgName);
-                    final IntentFilter filter = new IntentFilter();
-                    filter.addAction(UsbManager.ACTION_USB_STATE);
-                    mContext.registerReceiver(floReceiver, filter);
-
-                } else {
-                    mService.stopTethering(TETHERING_WIFI, pkgName);
-                }
+                mService.startTethering(TETHERING_WIFI, wrappedCallback, true, pkgName);
+                final IntentFilter filter = new IntentFilter();
+                filter.addAction(UsbManager.ACTION_USB_STATE);
+                mContext.registerReceiver(floReceiver, filter);
             }
         } catch (Exception e) {
             Log.e(TAG, "FloExtensions: Exception trying to start tethering.", e);
