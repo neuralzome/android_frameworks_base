@@ -1448,7 +1448,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                 mPowerKeyHandled = true;
                 Vibrator vibrator = new SystemVibrator(mContext);
                 try {
-                    vibrator.vibrate(SystemProperties.getInt("persist.vibration.pre_shutdown", 2000), VIBRATION_ATTRIBUTES);
+                    vibrator.vibrate(2000, VIBRATION_ATTRIBUTES);
                 } catch (Exception e) {
                     Log.w("FloVib", "Failed to vibrate for 2 seconds", e);
                 }

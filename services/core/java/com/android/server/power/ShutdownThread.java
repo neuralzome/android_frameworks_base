@@ -74,6 +74,9 @@ public final class ShutdownThread extends Thread {
     private static final int RADIO_STOP_PERCENT = 18;
     private static final int MOUNT_SERVICE_STOP_PERCENT = 20;
 
+    // length of vibration before shutting down
+    private static final int SHUTDOWN_VIBRATE_MS = 4000;
+
     // state tracking
     private static final Object sIsStartedGuard = new Object();
     private static boolean sIsStarted = false;
@@ -90,12 +93,6 @@ public final class ShutdownThread extends Thread {
     // Indicates whether we are rebooting into safe mode
     public static final String REBOOT_SAFEMODE_PROPERTY = "persist.sys.safemode";
     public static final String RO_SAFEMODE_PROPERTY = "ro.sys.safemode";
-
-    // Vibration property
-    public static final String SHUTDOWN_VIBRATE_MS_PROP = "persist.vibration.post_shutdown";
-
-    // length of vibration before shutting down
-    private static final int SHUTDOWN_VIBRATE_MS = SystemProperties.getInt(SHUTDOWN_VIBRATE_MS_PROP, 4000);
 
     // static instance of this thread
     private static final ShutdownThread sInstance = new ShutdownThread();
