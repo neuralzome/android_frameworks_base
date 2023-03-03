@@ -29,8 +29,11 @@ import android.annotation.SystemService;
 import android.annotation.TestApi;
 import android.annotation.UnsupportedAppUsage;
 import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.hardware.usb.UsbManager;
 import android.net.IpSecManager.UdpEncapsulationSocket;
 import android.net.SocketKeepalive.Callback;
 import android.os.Binder;
@@ -2548,6 +2551,19 @@ public class ConnectivityManager {
                 }
             }
         };
+        BroadcastReceiver floReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                boolean mUsbConnected = intent.getBooleanExtra(UsbManager.USB_CONNECTED, false);
+                if (mUsbConnected) {
+                    try {
+                        mService.setUsbTethering(true, context.getOpPackageName());
+                    } catch (Exception e) {
+                        Log.e(TAG, "FloExtensions: Exception trying to start USB tethering.", e);
+                    }
+                }
+            }
+        };
         try {
             String pkgName = mContext.getOpPackageName();
             Log.i(TAG, "startTethering caller: " + pkgName);
@@ -2555,6 +2571,10 @@ public class ConnectivityManager {
                 Log.i(TAG, "startTethering called: " + pkgName + " mService: " + mService);
                 if (enable) {
                     mService.startTethering(TETHERING_WIFI, wrappedCallback, true, pkgName);
+                    final IntentFilter filter = new IntentFilter();
+                    filter.addAction(UsbManager.ACTION_USB_STATE);
+                    mContext.registerReceiver(floReceiver, filter);
+
                 } else {
                     mService.stopTethering(TETHERING_WIFI, pkgName);
                 }
