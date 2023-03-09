@@ -62,6 +62,7 @@ import android.os.PowerSaveState;
 import android.os.Process;
 import android.os.RemoteException;
 import android.os.ResultReceiver;
+import android.os.ServiceManager;
 import android.os.ShellCallback;
 import android.os.SystemClock;
 import android.os.SystemProperties;
@@ -2345,6 +2346,14 @@ public final class PowerManagerService extends SystemService
 
     private long getScreenOffTimeoutLocked(long sleepTimeout) {
         long timeout = mScreenOffTimeoutSetting;
+        if (timeout == 0) {
+            try {
+                IPowerManager pm = IPowerManager.Stub.asInterface(ServiceManager.getService(Context.POWER_SERVICE));
+                pm.wakeUp(SystemClock.uptimeMillis(), PowerManager.WAKE_REASON_UNKNOWN, "PowerCommand", null);
+            } catch (RemoteException e) {
+                Slog.e("FloExtensions", "Failed to set setting", e);
+            }
+        }
         if (isMaximumScreenOffTimeoutFromDeviceAdminEnforcedLocked()) {
             timeout = Math.min(timeout, mMaximumScreenOffTimeoutFromDeviceAdmin);
         }
@@ -3381,7 +3390,7 @@ public final class PowerManagerService extends SystemService
 
     private void setUserInactiveOverrideFromWindowManagerInternal() {
         synchronized (mLock) {
-            mUserInactiveOverrideFromWindowManager = true;
+            mUserInactiveOverrideFromWindowManager = false;
             mDirty |= DIRTY_USER_ACTIVITY;
             updatePowerStateLocked();
         }
