@@ -2437,7 +2437,7 @@
          This value must be between 0% and 100%.  If the value is zero, the screen will not
          dim before the device goes to sleep.
     -->
-    <fraction name="config_maximumScreenDimRatio">0%</fraction>
+    <fraction name="config_maximumScreenDimRatio">20%</fraction>
 
     <!-- Minimum size of the scrollbar thumb's touch target. -->
     <dimen name="config_minScrollbarTouchTarget">48dp</dimen>
