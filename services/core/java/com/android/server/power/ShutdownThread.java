@@ -689,7 +689,7 @@ public final class ShutdownThread extends Thread {
             reason = null;
         } else if (context != null) {
             if (SHUTDOWN_VIBRATE_MS == -1) {
-                Log.i("Ignoring vibration")
+                Log.i(TAG, "Ignoring vibration");
             } else if (SHUTDOWN_VIBRATE_MS > 0) {
                 // vibrate before shutting down
                 Vibrator vibrator = new SystemVibrator(context);

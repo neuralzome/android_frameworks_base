@@ -224,6 +224,12 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
+// extra
+import android.net.wifi.WifiConfiguration;
+import android.net.wifi.WifiManager;
+import static android.net.ConnectivityManager.ACTION_TETHER_STATE_CHANGED;
+import static android.net.wifi.WifiManager.WIFI_AP_STATE_CHANGED_ACTION;
+
 /**
  * @hide
  */
@@ -242,6 +248,14 @@ public class ConnectivityService extends IConnectivityManager.Stub
     private static final boolean VDBG = Log.isLoggable(TAG, Log.VERBOSE);
 
     private static final boolean LOGD_BLOCKED_NETWORKINFO = true;
+
+    // to update ssid and password
+    private static final String KEY_SSID = "ssid";
+    private static final String KEY_PASSWORD = "password";
+    private static final String UPDATE_WIFI_TETHER_ACTION = "com.android.settings.wifi.tether.UpdateHotspot";
+
+    private ConnectivityManager mConnectivityManager;
+    private WifiManager mWifiManager;
 
     /**
      * Default URL to use for {@link #getCaptivePortalServerUrl()}. This should not be changed
@@ -989,6 +1003,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
         intentFilter.addAction(Intent.ACTION_USER_ADDED);
         intentFilter.addAction(Intent.ACTION_USER_REMOVED);
         intentFilter.addAction(Intent.ACTION_USER_UNLOCKED);
+        intentFilter.addAction(UPDATE_WIFI_TETHER_ACTION);
+        intentFilter.addAction(WIFI_AP_STATE_CHANGED_ACTION);
         mContext.registerReceiverAsUser(
                 mIntentReceiver,
                 UserHandle.ALL,
@@ -997,6 +1013,9 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 mHandler);
         mContext.registerReceiverAsUser(mUserPresentReceiver, UserHandle.SYSTEM,
                 new IntentFilter(Intent.ACTION_USER_PRESENT), null, null);
+        
+        mConnectivityManager = (ConnectivityManager) mContext.getSystemService(Context.CONNECTIVITY_SERVICE);
+        mWifiManager = (WifiManager) mContext.getSystemService(Context.WIFI_SERVICE);
 
         // Listen to package add and removal events for all users.
         intentFilter = new IntentFilter();
@@ -5079,11 +5098,87 @@ public class ConnectivityService extends IConnectivityManager.Stub
         }
     }
 
+    private WifiConfiguration buildNewConfig(String ssid, String password) {
+        final WifiConfiguration config = new WifiConfiguration();
+        config.SSID = ssid;
+        config.allowedKeyManagement.set(WifiConfiguration.KeyMgmt.WPA2_PSK);
+        config.preSharedKey = password;
+        config.allowedAuthAlgorithms.set(WifiConfiguration.AuthAlgorithm.OPEN);
+        config.apBand = WifiConfiguration.AP_BAND_2GHZ;
+        return config;
+    }
+
+    final ConnectivityManager.OnStartTetheringCallback mOnStartTetheringCallback 
+        = new ConnectivityManager.OnStartTetheringCallback() {
+            @Override
+            public void onTetheringFailed() {
+                super.onTetheringFailed();
+                Log.e(TAG, "Failed to start Wi-Fi Tethering.");
+            }
+        };
+
+    private boolean updateHotspot(String ssid, String password) {
+        try {
+            if(mWifiManager == null) {
+                mWifiManager = (WifiManager) mContext.getSystemService(Context.WIFI_SERVICE);
+            }
+            WifiConfiguration config = buildNewConfig(ssid, password);
+            if (mWifiManager.getWifiApState() == WifiManager.WIFI_AP_STATE_ENABLED) {
+                Log.d(TAG, "Wifi AP config changed while enabled, stopping ....");
+                stopHotspot();
+            }
+            
+            boolean success = mWifiManager.setWifiApConfiguration(config);
+            Log.i(TAG, "SoftAp configuration set : "+config+" status :"+success);
+            Log.i(TAG, "Waiting for AP Changed broadcast ...");
+            return success;
+        } catch(Exception e) {
+            Log.e(TAG, "Error in setting Hotspot ssid and password : "+e);
+            return false;
+        }
+    }
+
+    private void startHotspot() {
+        if(mConnectivityManager == null) {
+            mConnectivityManager = (ConnectivityManager) mContext.getSystemService(Context.CONNECTIVITY_SERVICE);
+        }
+        mConnectivityManager.startTethering(ConnectivityManager.TETHERING_WIFI, true /* showProvisioningUi */,
+                    mOnStartTetheringCallback, new Handler(Looper.getMainLooper()));
+    }
+
+    private void stopHotspot() {
+        if(mConnectivityManager == null) {
+            mConnectivityManager = (ConnectivityManager) mContext.getSystemService(Context.CONNECTIVITY_SERVICE);
+        }
+        mConnectivityManager.stopTethering(ConnectivityManager.TETHERING_WIFI);
+    }
+
     private BroadcastReceiver mIntentReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             ensureRunningOnConnectivityServiceThread();
             final String action = intent.getAction();
+            if (UPDATE_WIFI_TETHER_ACTION.equals(action)) {
+                // perform update hotspot here
+                String ssid = intent.getStringExtra(KEY_SSID);
+                String password = intent.getStringExtra(KEY_PASSWORD);
+                Log.i(TAG, "Updating Wifi Hotspot to "+ssid+" and "+password);
+                if(!updateHotspot(ssid.trim(), password.trim())) {
+                    Log.e(TAG, "Failed to update hotspot ssid and password");
+                }
+                return;
+            }
+
+            if (WIFI_AP_STATE_CHANGED_ACTION.equals(action)) {
+                int state = intent.getIntExtra(WifiManager.EXTRA_WIFI_AP_STATE, 0);
+                Log.i(TAG, "Received WiFi AP state : "+state);
+                if (state == WifiManager.WIFI_AP_STATE_DISABLED) {
+                    Log.i(TAG, "Starting Hotspot ...");
+                    startHotspot();
+                }
+                return;
+            }
+
             final int userId = intent.getIntExtra(Intent.EXTRA_USER_HANDLE, UserHandle.USER_NULL);
             final int uid = intent.getIntExtra(Intent.EXTRA_UID, -1);
             final Uri packageData = intent.getData();
