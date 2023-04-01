@@ -75,7 +75,8 @@ public final class ShutdownThread extends Thread {
     private static final int MOUNT_SERVICE_STOP_PERCENT = 20;
 
     // length of vibration before shutting down
-    private static final int SHUTDOWN_VIBRATE_MS = 4000;
+    // -1 to disable it entirely
+    private static final int SHUTDOWN_VIBRATE_MS = -1;
 
     // state tracking
     private static final Object sIsStartedGuard = new Object();
@@ -686,20 +687,24 @@ public final class ShutdownThread extends Thread {
             PowerManagerService.lowLevelReboot(reason);
             Log.e(TAG, "Reboot failed, will attempt shutdown instead");
             reason = null;
-        } else if (SHUTDOWN_VIBRATE_MS > 0 && context != null) {
-            // vibrate before shutting down
-            Vibrator vibrator = new SystemVibrator(context);
-            try {
-                vibrator.vibrate(SHUTDOWN_VIBRATE_MS, VIBRATION_ATTRIBUTES);
-            } catch (Exception e) {
-                // Failure to vibrate shouldn't interrupt shutdown.  Just log it.
-                Log.w(TAG, "Failed to vibrate during shutdown.", e);
-            }
+        } else if (context != null) {
+            if (SHUTDOWN_VIBRATE_MS == -1) {
+                Log.i("Ignoring vibration")
+            } else if (SHUTDOWN_VIBRATE_MS > 0) {
+                // vibrate before shutting down
+                Vibrator vibrator = new SystemVibrator(context);
+                try {
+                    vibrator.vibrate(SHUTDOWN_VIBRATE_MS, VIBRATION_ATTRIBUTES);
+                } catch (Exception e) {
+                    // Failure to vibrate shouldn't interrupt shutdown.  Just log it.
+                    Log.w(TAG, "Failed to vibrate during shutdown.", e);
+                }
 
-            // vibrator is asynchronous so we need to wait to avoid shutting down too soon.
-            try {
-                Thread.sleep(SHUTDOWN_VIBRATE_MS);
-            } catch (InterruptedException unused) {
+                // vibrator is asynchronous so we need to wait to avoid shutting down too soon.
+                try {
+                    Thread.sleep(SHUTDOWN_VIBRATE_MS);
+                } catch (InterruptedException unused) {
+                }
             }
         }
         // Shutdown power
