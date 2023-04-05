@@ -484,7 +484,7 @@ public final class PowerManagerService extends SystemService
     private int mStayOnWhilePluggedInSetting;
 
     // True if the device should stay on.
-    private boolean mStayOn;
+    private boolean mStayOn = true;
 
     // True if the lights should stay off until an explicit user action.
     private static boolean sQuiescent;
@@ -1975,7 +1975,7 @@ public final class PowerManagerService extends SystemService
      * Sets DIRTY_STAY_ON if a change occurred.
      */
     private void updateStayOnLocked(int dirty) {
-        if ((dirty & (DIRTY_BATTERY_STATE | DIRTY_SETTINGS)) != 0) {
+        /* if ((dirty & (DIRTY_BATTERY_STATE | DIRTY_SETTINGS)) != 0) {
             final boolean wasStayOn = mStayOn;
             if (mStayOnWhilePluggedInSetting != 0
                     && !isMaximumScreenOffTimeoutFromDeviceAdminEnforcedLocked()) {
@@ -1987,7 +1987,8 @@ public final class PowerManagerService extends SystemService
             if (mStayOn != wasStayOn) {
                 mDirty |= DIRTY_STAY_ON;
             }
-        }
+        } */
+        mStayOn = true;
     }
 
     /**
