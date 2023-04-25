@@ -254,8 +254,8 @@ public final class BatteryService extends SystemService {
         publishBinderService("batteryproperties", mBatteryPropertiesRegistrar);
         publishLocalService(BatteryManagerInternal.class, new LocalService());
 
-        FloLiveChecker checker = new FloLiveChecker();
-        checker.start();
+        // FloLiveChecker checker = new FloLiveChecker();
+        // checker.start();
     }
 
     @Override

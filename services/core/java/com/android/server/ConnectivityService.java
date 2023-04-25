@@ -228,7 +228,6 @@ import java.util.TreeSet;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiManager;
 import static android.net.ConnectivityManager.ACTION_TETHER_STATE_CHANGED;
-import static android.net.wifi.WifiManager.WIFI_AP_STATE_CHANGED_ACTION;
 
 /**
  * @hide
@@ -1004,7 +1003,6 @@ public class ConnectivityService extends IConnectivityManager.Stub
         intentFilter.addAction(Intent.ACTION_USER_REMOVED);
         intentFilter.addAction(Intent.ACTION_USER_UNLOCKED);
         intentFilter.addAction(UPDATE_WIFI_TETHER_ACTION);
-        intentFilter.addAction(WIFI_AP_STATE_CHANGED_ACTION);
         mContext.registerReceiverAsUser(
                 mIntentReceiver,
                 UserHandle.ALL,
@@ -5110,18 +5108,30 @@ public class ConnectivityService extends IConnectivityManager.Stub
 
     final ConnectivityManager.OnStartTetheringCallback mOnStartTetheringCallback 
         = new ConnectivityManager.OnStartTetheringCallback() {
+
+            @Override
+            public void onTetheringStarted() {
+                Log.i(TAG, "Started Wi-Fi Tethering.");
+                if(!hotspot_updated) {
+                    WifiConfiguration config = mWifiManager.getWifiApConfiguration();
+                    Log.i(TAG, "Hotspot set successfully to SSID : "+config.SSID+", Password : "+config.preSharedKey);
+                    hotspot_updated = true;
+                }
+            }
+
             @Override
             public void onTetheringFailed() {
-                super.onTetheringFailed();
                 Log.e(TAG, "Failed to start Wi-Fi Tethering.");
             }
         };
 
+    private boolean hotspot_updated = false;
     private boolean updateHotspot(String ssid, String password) {
         try {
             if(mWifiManager == null) {
                 mWifiManager = (WifiManager) mContext.getSystemService(Context.WIFI_SERVICE);
             }
+            hotspot_updated = false;
             WifiConfiguration config = buildNewConfig(ssid, password);
             if (mWifiManager.getWifiApState() == WifiManager.WIFI_AP_STATE_ENABLED) {
                 Log.d(TAG, "Wifi AP config changed while enabled, stopping ....");
@@ -5130,7 +5140,22 @@ public class ConnectivityService extends IConnectivityManager.Stub
             
             boolean success = mWifiManager.setWifiApConfiguration(config);
             Log.i(TAG, "SoftAp configuration set : "+config+" status :"+success);
-            Log.i(TAG, "Waiting for AP Changed broadcast ...");
+            Log.i(TAG, "Sending request to restart SoftAp");
+
+            int count = 0;
+            final int HOTSPOT_ENABLED_CHECKER_TIMEOUT_IN_SECS = 10;
+            while(mWifiManager.isWifiApEnabled()) {
+                if(count > HOTSPOT_ENABLED_CHECKER_TIMEOUT_IN_SECS) {
+                    Log.e(TAG, "Hotspot didn't turn off.");
+                    return false;
+                }
+                count++;
+                Thread.sleep(1000);
+                continue;
+            }
+
+            startHotspot();
+
             return success;
         } catch(Exception e) {
             Log.e(TAG, "Error in setting Hotspot ssid and password : "+e);
@@ -5142,6 +5167,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         if(mConnectivityManager == null) {
             mConnectivityManager = (ConnectivityManager) mContext.getSystemService(Context.CONNECTIVITY_SERVICE);
         }
+        Log.i(TAG, "startHotspot() called");
         mConnectivityManager.startTethering(ConnectivityManager.TETHERING_WIFI, true /* showProvisioningUi */,
                     mOnStartTetheringCallback, new Handler(Looper.getMainLooper()));
     }
@@ -5150,6 +5176,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
         if(mConnectivityManager == null) {
             mConnectivityManager = (ConnectivityManager) mContext.getSystemService(Context.CONNECTIVITY_SERVICE);
         }
+        Log.i(TAG, "stopHotspot() called");
         mConnectivityManager.stopTethering(ConnectivityManager.TETHERING_WIFI);
     }
 
@@ -5165,16 +5192,6 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 Log.i(TAG, "Updating Wifi Hotspot to "+ssid+" and "+password);
                 if(!updateHotspot(ssid.trim(), password.trim())) {
                     Log.e(TAG, "Failed to update hotspot ssid and password");
-                }
-                return;
-            }
-
-            if (WIFI_AP_STATE_CHANGED_ACTION.equals(action)) {
-                int state = intent.getIntExtra(WifiManager.EXTRA_WIFI_AP_STATE, 0);
-                Log.i(TAG, "Received WiFi AP state : "+state);
-                if (state == WifiManager.WIFI_AP_STATE_DISABLED) {
-                    Log.i(TAG, "Starting Hotspot ...");
-                    startHotspot();
                 }
                 return;
             }
