@@ -490,13 +490,15 @@ public class BlockedNumberContract {
                 Bundle extras) {
             try {
                 String caller = context.getOpPackageName();
-                final Bundle res = context.getContentResolver().call(
+                Log.i(LOG_TAG, "Incoming calls not supported. Proceeding to block phone number : "+phoneNumber);
+                return BlockedNumberContract.STATUS_BLOCKED_UNKNOWN_NUMBER;
+                /* final Bundle res = context.getContentResolver().call(
                         AUTHORITY_URI, METHOD_SHOULD_SYSTEM_BLOCK_NUMBER, phoneNumber, extras);
                 int blockResult = res != null ? res.getInt(RES_BLOCK_STATUS, STATUS_NOT_BLOCKED) :
                         BlockedNumberContract.STATUS_NOT_BLOCKED;
                 Log.d(LOG_TAG, "shouldSystemBlockNumber: number=%s, caller=%s, result=%s",
                         Log.piiHandle(phoneNumber), caller, blockStatusToString(blockResult));
-                return blockResult;
+                return blockResult; */
             } catch (NullPointerException | IllegalArgumentException ex) {
                 // The content resolver can throw an NPE or IAE; we don't want to crash Telecom if
                 // either of these happen.
